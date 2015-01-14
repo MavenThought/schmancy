@@ -52,6 +52,9 @@
     <Compile Include="Schmancy.fs" />
     <Content Include="packages.config" />
     <Content Include="app.config" />
+    <Compile Include="..\..\SolutionAssemblyVersionInfo.fs">
+      <Link>SolutionAssemblyVersionInfo.fs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharpx.Core">

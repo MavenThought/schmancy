@@ -9,8 +9,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build Tools", "Build Tools"
 	ProjectSection(SolutionItems) = preProject
 		BuildTools\build.fsx = BuildTools\build.fsx
 		BuildTools\config.fsx = BuildTools\config.fsx
+		BuildTools\package.fsx = BuildTools\package.fsx
+		SolutionAssemblyVersionInfo.fs = SolutionAssemblyVersionInfo.fs
 		BuildTools\test.fsx = BuildTools\test.fsx
 		BuildTools\userInput.fsx = BuildTools\userInput.fsx
+		BuildTools\version.fsx = BuildTools\version.fsx
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{CDD301A1-C09E-4DA2-B964-9D9B6CAFE7F2}"

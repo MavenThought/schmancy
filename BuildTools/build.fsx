@@ -8,6 +8,8 @@ RestorePackages()
 
 #load "./config.fsx"
 #load "./test.fsx"
+#load "./version.fsx"
+#load "./package.fsx"
 
 open Config
 
