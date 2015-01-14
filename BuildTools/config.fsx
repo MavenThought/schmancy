@@ -10,7 +10,7 @@ open Fake
 [<AutoOpen>]
 module Config =
     let testDir     = "./test"
-    let srcDir      = "./"
+    let srcDir      = "./src"
     let prjName     = "Schmancy"
     let mainSln     = prjName + ".sln"
     let mainTestPrj = prjName + ".Tests"

@@ -12,6 +12,8 @@ open Config
 
 module Version =
 
+    let versionFile = "VERSION"
+
     let unionToString (x:'a) = 
         match FSharpValue.GetUnionFields(x, typeof<'a>) with
         | case, _ -> case.Name
@@ -30,7 +32,7 @@ module Version =
 
         override this.ToString () = sprintf "%d.%d.%d.%d" major minor revision build
         
-        member this.Save () = WriteFile (srcDir @@ "VERSION") [this.ToString()]
+        member this.Save () = WriteFile versionFile [this.ToString()]
 
         member this.Bump part =
             let ma, mi, re, b = match part with
@@ -44,7 +46,7 @@ module Version =
             newVersion
 
 
-    let Current = ReadLine (srcDir @@ "VERSION")
+    let Current = ReadLine versionFile
 
     let attributes =
         let commitHash = Information.getCurrentSHA1 "."
