@@ -8,7 +8,6 @@ RestorePackages()
 
 #load "./config.fsx"
 #load "./test.fsx"
-#load "./migrations.fsx"
 
 open Config
 
@@ -22,19 +21,13 @@ let addBuildTarget name env sln =
     )
 
 environments |> Seq.iter (fun env -> 
-    addBuildTarget "CadApi" env mainSln
+    addBuildTarget prjName env mainSln
 
     Target  (targetWithEnv "All" env) (fun _ ->
-        run (targetWithEnv "CadApi" env)
+        run (targetWithEnv prjName env)
     )
 )
 
-environments |> Seq.iter (fun env ->
-    Target ("Configure:Test:" + env) (fun _ ->
-        setBuildMode env
-        configureDbConn testConfig ("Test-" + env)
-    )
-)
 
 // start build
 RunTargetOrDefault "All:Debug"

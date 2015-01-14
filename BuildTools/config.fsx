@@ -9,11 +9,12 @@ open Fake
 // Properties
 [<AutoOpen>]
 module Config =
-    let testDir     = "./"
+    let testDir     = "./test"
     let srcDir      = "./"
-    let mainSln     = "CadApi.sln"
-    let mainTestPrj = @"CadApi.Tests"
-    let mainPrj     = @"CadApi"
+    let prjName     = "Schmancy"
+    let mainSln     = prjName + ".sln"
+    let mainTestPrj = prjName + ".Tests"
+    let mainPrj     = prjName
     let mainConfig  = mainPrj @@ "app.config"
     let testConfig  = mainTestPrj @@ "app.config"
 
@@ -39,49 +40,6 @@ module Config =
                 ]
         }
 
-
-    let private connectionPath = @"//connectionStrings/add[@name='CadApi']"
-    let private connAttr = "connectionString"
-
-    let readDbConnections () =
-        let findConnection (file:FileInfo) =
-            XPathDocument(file.FullName).CreateNavigator()
-            |> (fun xpath -> xpath.SelectSingleNode connectionPath)
-            |> (fun node  -> if node = null then null else node.GetAttribute(connAttr, ""))
-
-        let configName category (file:FileInfo) = 
-            let name = (file.Name.Split '.').[1]
-            if name = "config" then category 
-            else sprintf "%s-%s" category name
-
-        Map[
-            "Test", mainTestPrj
-            "Main", mainPrj
-        ]
-        |> Seq.map (fun kvp  -> 
-            DirectoryInfo(kvp.Value).GetFiles "app*.config"
-            |> Seq.map (fun fi -> configName kvp.Key fi, findConnection fi)
-           )
-        |> Seq.concat
-        |> Seq.filter (fun (name, conn) -> conn |> System.String.IsNullOrEmpty |> not)
-
-    let configureDbConn (file:string) target =
-        let _, targetConn = readDbConnections() |> Seq.find (fun (name, _) -> name = target)
-        let doc = XmlDocument()
-        
-        doc.Load file
-
-        let node = doc.SelectSingleNode connectionPath
-
-        printf "- Opening file %s\n" file
-        printf "- Replacing connection %s\n" (node.Attributes.[connAttr].Value)
-        printf "- With      connection %s\n" targetConn
-
-        node.Attributes.[connAttr].Value <- targetConn
-
-        doc.Save file
-
-        
 
 
 

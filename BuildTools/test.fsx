@@ -8,9 +8,7 @@ open Config
 open System.Configuration
 
 
-let allTests = Map["CadApi", "CadApi.Tests"]
-
-let testFiles testPrj = sprintf "./%s/bin/%s/*Tests.dll" testPrj (buildMode())
+let allTests = Map["Schmancy", "Schmancy.Tests"]
 
 let runTests files =
     files
@@ -21,8 +19,10 @@ let runTests files =
              OutputFile = "./TestResults.xml" })
 
 let addTestTarget targetName testPrj =
-    let fsProj = sprintf "./%s/%s.fsproj" testPrj testPrj
+    let fsProj = sprintf "%s/%s/%s.fsproj" testDir testPrj testPrj
     let prjFile = fsProj
+
+    let testFiles testPrj = sprintf "%s/%s/bin/%s/*Tests.dll" testDir testPrj (buildMode())
 
     Target ("Test:" + targetName) (fun _ ->
         debugMode ()

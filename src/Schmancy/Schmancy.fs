@@ -43,7 +43,7 @@ module Implementation =
                 | Some body -> 
                     if x.Request.Body.AsString() = body then ok
                     else notFound
-                | None -> notFound
+                | None -> ok
             
             let matchHeaders code = 
                 if request.Headers = (x.Request.Headers |> toMap) then ok
@@ -51,27 +51,32 @@ module Implementation =
             
             let callResponse code = request.Response x.Request
 
-            let response () = 
-                System.Diagnostics.Trace.WriteLine("Response is called")
-                ()
-                |> matchBody
-                |> Choice.map matchHeaders
-                |> Choice.map callResponse
-                |> function
-                   | Choice1Of2 x -> x
-                   | Choice2Of2 x -> x
-                |> (fun code -> new Response(StatusCode=code) |> box)
+            let response = new Func<obj, obj>(fun _ ->
+                    ()
+                    |> matchBody
+                    |> Choice.map matchHeaders
+                    |> Choice.map callResponse
+                    |> function
+                       | Choice1Of2 x -> x
+                       | Choice2Of2 x -> x
+                    |> (fun code -> 
+                            System.Diagnostics.Trace.WriteLine(sprintf "Responding with code %O" code)
+                            new Response(StatusCode=code) |> box)
+                )
+            
 
-            ()
-//            match request.Type with
-//            | Any    -> x.Get.[request.Path]    <- fun _ -> response()
-//            | Get    -> x.Get.[request.Path]    <- fun _ -> response()
-//            | Post   -> ()
-////                x.Post.[request.Path]   <- fun _ -> 
-////                System.Diagnostics.Debug.WriteLine("Adding post handler")
-////                response()
-//            | Put    -> x.Put.[request.Path]    <- fun _ -> response()
-//            | Delete -> x.Delete.[request.Path] <- fun _ -> response()
+
+            match request.Type with
+            | Any    -> 
+                x.Get.[request.Path]    <- response
+                x.Post.[request.Path]   <- response
+                x.Put.[request.Path]    <- response
+                x.Delete.[request.Path] <- response
+
+            | Get    -> x.Get.[request.Path]    <- response
+            | Post   -> x.Post.[request.Path]   <- response
+            | Put    -> x.Put.[request.Path]    <- response
+            | Delete -> x.Delete.[request.Path] <- response
                     
     type CustomBootstrapper (request:RequestBuilder) =
         inherit DefaultNancyBootstrapper()
@@ -100,7 +105,7 @@ module Implementation =
          Headers= Map[]
          }
 
-    let andRespond (fn:Request -> HttpStatusCode) request = {request with Response=fn}
+    let withResponse (fn:Request -> HttpStatusCode) request = {request with Response=fn}
 
     let withBody body request = {request with Body=Some body}
 
@@ -116,8 +121,13 @@ module Implementation =
         {request with Headers=rest |> Map.add header values}
 
     let hostAndCall fn request = 
-        use host = new NancyHost(new CustomBootstrapper(request), new Uri(request.BaseUri))
-            
+        use host = new NancyHost(
+                        new Uri(request.BaseUri),
+                        new CustomBootstrapper(request),
+                        new HostConfiguration(UrlReservations=new UrlReservations(CreateAutomatically=true))
+                   )
+        
+        
         host.Start()
             
         let result = fn()
