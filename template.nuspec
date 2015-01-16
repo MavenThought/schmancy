@@ -8,5 +8,7 @@
 		<description>@description@</description>
 		<releaseNotes>@summary@</releaseNotes>
 		<copyright>Copyright MavenThought Inc.</copyright>
-	</metadata>
+    @dependencies@
+    @references@
+  </metadata>
 </package>

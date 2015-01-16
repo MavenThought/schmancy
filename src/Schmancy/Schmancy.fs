@@ -125,22 +125,27 @@ module Implementation =
 
             container.Register<INancyModuleCatalog>(customCatalog) |> ignore
 
-    let stubRequest (uri:string) (rt: RequestType) (path:string) = 
-        let request = {
-             Type=rt
-             Path=path
+    let private defaultRequest = {
+             Type=RequestType.Get
+             Path=""
              StatusCode=HttpStatusCode.OK
              Response=None
              Body=None
              Headers= Map[]
         }
 
+    let stubRequest (uri:string) (rt: RequestType) (path:string) = 
+        let request = {defaultRequest with Type=rt;Path=path}
         {BaseUri=uri;Requests = [request]}
 
     let updateRequest fn site =
         match site.Requests with
         | r::rest -> {site with Requests= (fn r)::rest}
         | _  -> site
+
+    let andStub (rt:RequestType) (path:string) site = 
+        let request = {defaultRequest with Type=rt;Path=path}
+        {site with Requests = request::site.Requests}
 
     let withJsonResponse response = updateRequest (fun r -> {r with Response=Some (JsonResponse response)})
 
@@ -161,6 +166,8 @@ module Implementation =
             {r with Headers=rest |> Map.add header values}
         )
 
+    type Host = | SchmancyHost of NancyHost
+
     let start site =
         let host = new NancyHost(
                         new Uri(site.BaseUri),
@@ -171,13 +178,14 @@ module Implementation =
         
         host.Start()
 
-        host
+        SchmancyHost host
 
-    let stop (host:NancyHost) = host.Stop()
+    let stop = function
+    | SchmancyHost nh -> nh.Stop()
 
     let hostAndCall fn site = 
         
-        use host = site |> start
+        let host = site |> start
          
         let result = fn()
             

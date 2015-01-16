@@ -37,8 +37,8 @@ module Package =
                 Summary = "Schmancy provides an easy way to specify HTTP URIs with expected parameters and responses to test APIs or any other software that uses HTTP calls"
                 WorkingDir = packagingDir
                 Version = Version.Current
-                Publish = false
-                PublishUrl = "http://nuget.org"
+                Publish = true
+                PublishUrl = @"c:\packages"
                 Dependencies = [
                                 dependency "Nancy"
                                 dependency "Nancy.Hosting.Self"
