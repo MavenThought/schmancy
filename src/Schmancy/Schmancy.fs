@@ -142,7 +142,7 @@ module Implementation =
         | r::rest -> {site with Requests= (fn r)::rest}
         | _  -> site
 
-    let withResponse response = updateRequest (fun r -> {r with Response=response})
+    let withResponse response = updateRequest (fun r -> {r with Response=Some response})
 
     let withStatus status = updateRequest (fun r -> {r with StatusCode=status})
 

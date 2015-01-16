@@ -29,6 +29,24 @@ module ``Stubbing for any method`` =
     [<Test>]
     let ``When calling with POST`` () = callWithMethod Method.POST
 
+module ``Returning JSON`` =
+
+    type Customer = {Name:string;Age:int}
+
+    [<Test>]
+    let ``When the call returns JSON`` () =
+        let request = new RestRequest("/", Method.GET)
+        request.RequestFormat <- DataFormat.Json
+
+        stubRequest url RequestType.Get "/customers"
+        |> withResponse (StringResponse "{customer}")
+        |> hostAndCall (fun _ -> 
+
+            let response = client.Execute(request)
+            
+            response.StatusCode
+            )
+        |> should equal System.Net.HttpStatusCode.OK
 
 module ``Stubbing with body and headers`` =
 
@@ -67,3 +85,5 @@ module ``Stubbing with body and headers`` =
             )
         |> should equal System.Net.HttpStatusCode.NotFound
 
+
+   
