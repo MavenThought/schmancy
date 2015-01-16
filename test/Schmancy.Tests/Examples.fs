@@ -16,7 +16,11 @@ module ``Stubbing for any method`` =
 
     let callWithMethod m =
         stubRequest url RequestType.Any "/"
-        |> hostAndCall (fun _ -> client.Execute(new RestRequest("/", m)).StatusCode)
+        |> withStatus Nancy.HttpStatusCode.OK
+        |> hostAndCall (fun _ -> 
+            let response = client.Execute(new RestRequest("/", m))
+            response.StatusCode
+        )
         |> should equal System.Net.HttpStatusCode.OK
 
     [<Test>]

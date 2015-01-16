@@ -6,7 +6,9 @@ open Nancy.Hosting.Self
 open Nancy.TinyIoc
 open Nancy.Bootstrapper
 open Nancy.Extensions
+open Nancy.Responses
 open FSharpx
+open FSharpx.Validation
 
 [<AutoOpen>]
 module Implementation =
@@ -17,16 +19,27 @@ module Implementation =
         | Put
         | Delete
 
-    type RequestBuilder = {
+    type ResponseFn = (Request -> Response -> unit)
+
+    type ResponseType =
+    | StringResponse of string
+    | CustomResponse of ResponseFn
+
+    type RequestMatcher = {
         Type:RequestType
         Path:string
-        Response:Request -> HttpStatusCode
-        BaseUri:string
+        StatusCode: HttpStatusCode
+        Response: ResponseType option
         Body: string option
         Headers: Map<string, string seq>
     }
 
-    type SchmancyModule (request: RequestBuilder) as x =
+    type SiteMatcher = {
+        BaseUri:string
+        Requests: RequestMatcher list
+    }
+
+    type SchmancyModule (site: SiteMatcher) as x =
         inherit NancyModule()
             
         do 
@@ -38,101 +51,137 @@ module Implementation =
                 |> Seq.map (|KeyValue|)
                 |> Map.ofSeq
 
-            let matchBody () = 
-                match request.Body with
-                | Some body -> 
-                    if x.Request.Body.AsString() = body then ok
+            let addRequest request =            
+                let matchBody () = 
+                    match request.Body with
+                    | Some body -> 
+                        if x.Request.Body.AsString() = body then ok
+                        else notFound
+                    | None -> ok
+            
+                let matchHeaders code = 
+                    if request.Headers = (x.Request.Headers |> toMap) then ok
                     else notFound
-                | None -> ok
             
-            let matchHeaders code = 
-                if request.Headers = (x.Request.Headers |> toMap) then ok
-                else notFound
-            
-            let callResponse code = request.Response x.Request
+                let callResponse code = 
+                    let response = new Response(StatusCode=request.StatusCode)
 
-            let response = new Func<obj, obj>(fun _ ->
-                    ()
-                    |> matchBody
-                    |> Choice.map matchHeaders
-                    |> Choice.map callResponse
-                    |> function
-                       | Choice1Of2 x -> x
-                       | Choice2Of2 x -> x
-                    |> (fun code -> 
-                            System.Diagnostics.Trace.WriteLine(sprintf "Responding with code %O" code)
-                            new Response(StatusCode=code) |> box)
-                )
-            
+                    match request.Response with
+                    | Some (StringResponse s)  -> 
+                        response.ContentType <- "json"
+                        response.Contents <- (fun stream -> 
+                            let writer = new System.IO.StreamWriter(stream)
+                            writer.Write s
+                            writer.Flush()
+                        )
+                    | Some (CustomResponse fn) -> fn x.Request response
+                    | None -> ()
 
+                    response
 
-            match request.Type with
-            | Any    -> 
-                x.Get.[request.Path]    <- response
-                x.Post.[request.Path]   <- response
-                x.Put.[request.Path]    <- response
-                x.Delete.[request.Path] <- response
+                let response = new Func<obj, obj>(fun _ ->
+                        ()
+                        |> matchBody
+                        |> Choice.map matchHeaders
+                        |> Choice.map callResponse
+                        |> function
+                           | Choice1Of2 response -> response
+                           | Choice2Of2 code -> new Response(StatusCode=code)
+                        |> box
+                    )
+                
+                match request.Type with
+                | Any    -> 
+                    x.Get.[request.Path]    <- response
+                    x.Post.[request.Path]   <- response
+                    x.Put.[request.Path]    <- response
+                    x.Delete.[request.Path] <- response
 
-            | Get    -> x.Get.[request.Path]    <- response
-            | Post   -> x.Post.[request.Path]   <- response
-            | Put    -> x.Put.[request.Path]    <- response
-            | Delete -> x.Delete.[request.Path] <- response
+                | Get    -> x.Get.[request.Path]    <- response
+                | Post   -> x.Post.[request.Path]   <- response
+                | Put    -> x.Put.[request.Path]    <- response
+                | Delete -> x.Delete.[request.Path] <- response
+
+            site.Requests |> Seq.iter addRequest
                     
-    type CustomBootstrapper (request:RequestBuilder) =
+    type CustomBootstrapper (site:SiteMatcher) =
         inherit DefaultNancyBootstrapper()
 
         override this.ConfigureApplicationContainer(container: TinyIoCContainer) =
             base.ConfigureApplicationContainer(container)
 
+            let instance () = new SchmancyModule(site) :> INancyModule
+
             let customCatalog = {new INancyModuleCatalog with
+
                                     member this.GetAllModules(context) = 
-                                        [new SchmancyModule(request)] |> Seq.cast<INancyModule>
+                                        [new SchmancyModule(site)] |> Seq.cast<INancyModule>
 
                                     member this.GetModule(moduleType, context) = 
                                         match moduleType with
-                                        | t when t = typeof<SchmancyModule> -> new SchmancyModule(request) :> INancyModule
+                                        | t when t = typeof<SchmancyModule> -> new SchmancyModule(site) :> INancyModule
                                         | _ -> null
                                 }
 
             container.Register<INancyModuleCatalog>(customCatalog) |> ignore
 
     let stubRequest (uri:string) (rt: RequestType) (path:string) = 
-        {Type=rt
-         Path=path
-         Response=(fun _ -> HttpStatusCode.OK)
-         BaseUri=uri
-         Body=None
-         Headers= Map[]
-         }
+        let request = {
+             Type=rt
+             Path=path
+             StatusCode=HttpStatusCode.OK
+             Response=None
+             Body=None
+             Headers= Map[]
+        }
 
-    let withResponse (fn:Request -> HttpStatusCode) request = {request with Response=fn}
+        {BaseUri=uri;Requests = [request]}
 
-    let withBody body request = {request with Body=Some body}
+    let updateRequest fn site =
+        match site.Requests with
+        | r::rest -> {site with Requests= (fn r)::rest}
+        | _  -> site
 
-    let withHeader header (value:obj) request =
-        let values = 
-            match request.Headers |> Map.tryFind header with
-            | Some values -> values
-            | None        -> Seq.empty
-            |> Seq.append [value.ToString()] 
+    let withResponse response = updateRequest (fun r -> {r with Response=response})
+
+    let withStatus status = updateRequest (fun r -> {r with StatusCode=status})
+
+    let withBody body = updateRequest (fun r -> {r with Body=Some body})
+
+    let withHeader header (value:obj) =
+        updateRequest (fun r -> 
+            let values = 
+                match r.Headers |> Map.tryFind header with
+                | Some values -> values
+                | None        -> Seq.empty
+                |> Seq.append [value.ToString()] 
         
-        let rest = request.Headers |> Map.remove header
+            let rest = r.Headers |> Map.remove header
+        
+            {r with Headers=rest |> Map.add header values}
+        )
 
-        {request with Headers=rest |> Map.add header values}
-
-    let hostAndCall fn request = 
-        use host = new NancyHost(
-                        new Uri(request.BaseUri),
-                        new CustomBootstrapper(request),
+    let start site =
+        let host = new NancyHost(
+                        new Uri(site.BaseUri),
+                        new CustomBootstrapper(site),
                         new HostConfiguration(UrlReservations=new UrlReservations(CreateAutomatically=true))
                    )
         
         
         host.Start()
-            
+
+        host
+
+    let stop (host:NancyHost) = host.Stop()
+
+    let hostAndCall fn site = 
+        
+        use host = site |> start
+         
         let result = fn()
             
-        host.Stop()
+        host |> stop
 
         result
 

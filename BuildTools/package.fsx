@@ -26,6 +26,8 @@ module Package =
 
         CopyFiles (packagingDir @@ "lib" @@ "net40") [prjFolder @@ (sprintf "bin/release/%s.dll" prjName)]
 
+        let dependency name = name, GetPackageVersion "./packages/" name
+
         NuGet (fun p -> 
             {p with
                 Authors = ["Amir Barylko";]
@@ -36,6 +38,13 @@ module Package =
                 WorkingDir = packagingDir
                 Version = Version.Current
                 Publish = false
-                PublishUrl = "http://nuget.org" }) 
-                "template.nuspec"
+                PublishUrl = "http://nuget.org"
+                Dependencies = [
+                                dependency "Nancy"
+                                dependency "Nancy.Hosting.Self"
+                                dependency "FSharpx.Core"
+                    ]
+
+            }) 
+            "template.nuspec"
     )
