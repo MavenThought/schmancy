@@ -35,18 +35,16 @@ module ``Returning JSON`` =
 
     [<Test>]
     let ``When the call returns JSON`` () =
-        let request = new RestRequest("/", Method.GET)
+        let request = new RestRequest("/customers", Method.GET)
         request.RequestFormat <- DataFormat.Json
 
         stubRequest url RequestType.Get "/customers"
-        |> withResponse (StringResponse "{customer}")
+        |> withJsonResponse "{customer:'Charles Magnus'}"
         |> hostAndCall (fun _ -> 
-
             let response = client.Execute(request)
-            
-            response.StatusCode
-            )
-        |> should equal System.Net.HttpStatusCode.OK
+            response.StatusCode, response.Content
+          )
+        |> should equal (System.Net.HttpStatusCode.OK, "{customer:'Charles Magnus'}")
 
 module ``Stubbing with body and headers`` =
 

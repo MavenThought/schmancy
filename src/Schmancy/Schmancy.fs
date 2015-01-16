@@ -22,7 +22,7 @@ module Implementation =
     type ResponseFn = (Request -> Response -> unit)
 
     type ResponseType =
-    | StringResponse of string
+    | JsonResponse of string
     | CustomResponse of ResponseFn
 
     type RequestMatcher = {
@@ -67,7 +67,7 @@ module Implementation =
                     let response = new Response(StatusCode=request.StatusCode)
 
                     match request.Response with
-                    | Some (StringResponse s)  -> 
+                    | Some (JsonResponse s)  -> 
                         response.ContentType <- "json"
                         response.Contents <- (fun stream -> 
                             let writer = new System.IO.StreamWriter(stream)
@@ -142,7 +142,7 @@ module Implementation =
         | r::rest -> {site with Requests= (fn r)::rest}
         | _  -> site
 
-    let withResponse response = updateRequest (fun r -> {r with Response=Some response})
+    let withJsonResponse response = updateRequest (fun r -> {r with Response=Some (JsonResponse response)})
 
     let withStatus status = updateRequest (fun r -> {r with StatusCode=status})
 
