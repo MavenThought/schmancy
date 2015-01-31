@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package >
+	<metadata>
+		<id>@project@</id>
+		<version>@build.number@</version>
+		<authors>@authors@</authors>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>@description@</description>
+		<releaseNotes>@summary@</releaseNotes>
+		<copyright>Copyright MavenThought Inc.</copyright>
+    @dependencies@
+    @references@
+  </metadata>
+</package>
