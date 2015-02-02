@@ -5,12 +5,17 @@ open NUnit.Framework
 open RestSharp
 
 open Schmancy
+open Newtonsoft.Json
 
 [<AutoOpen>]
 module Common =
 
     let url = "http://localhost:9988"
     let client = new RestClient(url)
+
+    type Customer = {Name:string; Id:int}
+
+    let customer = {Name="Charles Magnus"; Id=3}
 
 module ``Stubbing for any method`` =
 
@@ -29,18 +34,38 @@ module ``Stubbing for any method`` =
     [<Test>]
     let ``When calling with POST`` () = callWithMethod Method.POST
 
+module ``Query parameters`` =
+
+    let request = new RestRequest("/customers", Method.GET)
+
+    let stub =         
+        stubRequest url RequestType.Get "/customers"
+        |> withParameter "ids" "1,2,3,4"
+        |> withJsonResponse (JsonConvert.SerializeObject customer)
+
+    [<Test>]
+    let ``When the call uses the parameters`` () =
+        request.AddQueryParameter("ids", "1,2,3,4") |> ignore
+
+        stub
+        |> hostAndCall (fun _ -> 
+            let response = client.Execute(request)
+            response.StatusCode, JsonConvert.DeserializeObject<Customer>(response.Content)
+          )
+        |> should equal (System.Net.HttpStatusCode.OK, customer)
+
+    [<Test>]
+    let ``When the call does not use the parameters`` () =
+        stub
+        |> hostAndCall (fun _ -> client.Execute(request).StatusCode)
+        |> should equal System.Net.HttpStatusCode.NotFound
+
 module ``Returning JSON`` =
-
-    open Newtonsoft.Json
-
-    type Customer = {Name:string; Id:int}
 
     [<Test>]
     let ``When the call returns JSON`` () =
         let request = new RestRequest("/customers", Method.GET)
         request.RequestFormat <- DataFormat.Json
-
-        let customer = {Name="Charles Magnus"; Id=3}
 
         stubRequest url RequestType.Get "/customers"
         |> withJsonResponse  (JsonConvert.SerializeObject customer)

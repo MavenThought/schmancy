@@ -31,13 +31,28 @@ module Implementation =
         StatusCode: HttpStatusCode
         Response: ResponseType option
         Body: string option
-        Headers: Map<string, string seq>
+        Headers: Map<string, string seq> option
+        Query: Map<string, string> option
     }
 
     type SiteMatcher = {
         BaseUri:string
         Requests: RequestMatcher list
     }
+
+    module Map =
+        let ofHeaders dictionary = 
+            (dictionary :> seq<_>)
+            |> Seq.map (|KeyValue|)
+            |> Map.ofSeq
+
+        let ofQuery (dd:obj) = 
+            let dict = (dd :?> Nancy.DynamicDictionary)
+            dict
+            |> Seq.map (fun k -> (k, dict.[k].ToString()))
+            |> Map.ofSeq
+
+        let keys (aMap:Map<_, _>) = aMap |> Seq.map (fun kvp -> kvp.Key)
 
     type SchmancyModule (site: SiteMatcher) as x =
         inherit NancyModule()
@@ -46,23 +61,30 @@ module Implementation =
             let ok = Choice1Of2 HttpStatusCode.OK
             let notFound = Choice2Of2 HttpStatusCode.NotFound
 
-            let toMap dictionary = 
-                (dictionary :> seq<_>)
-                |> Seq.map (|KeyValue|)
-                |> Map.ofSeq
+            let matchRuleFor (fn:'T->'U->bool) (optional:'T option) (actual:'U) =
+                match optional with
+                | Some expected -> if (actual |> fn expected) then ok else notFound
+                | None -> ok
+
+            let sameAs = matchRuleFor (=)
+
+            let containsAll = 
+                let contains (aMap:Map<_,_>) (bMap:Map<_, _>) =
+                    let sameKeyAndValue k v = bMap |> Map.tryFind k |> Option.forall ((=) v)
+                    aMap |> Map.forall sameKeyAndValue
+                matchRuleFor contains
 
             let addRequest request =            
-                let matchBody () = 
-                    match request.Body with
-                    | Some body -> 
-                        if x.Request.Body.AsString() = body then ok
-                        else notFound
-                    | None -> ok
+                let matchBody () = x.Request.Body.AsString() |> sameAs request.Body
             
-                let matchHeaders code = 
-                    if request.Headers = (x.Request.Headers |> toMap) then ok
-                    else notFound
+                let matchHeaders _ = x.Request.Headers |> Map.ofHeaders |> containsAll request.Headers
             
+                let matchQuery _ = 
+                    let fn a b = true
+                    x.Request.Query 
+                    |> Map.ofQuery 
+                    |> matchRuleFor fn (request.Query)
+
                 let callResponse code = 
                     let response = new Response(StatusCode=request.StatusCode)
 
@@ -80,9 +102,10 @@ module Implementation =
                     response
 
                 let response = new Func<obj, obj>(fun _ ->
-                        ()
+                        () 
                         |> matchBody
-                        |> Choice.map matchHeaders
+//                        |> Choice.bind matchHeaders
+//                        |> Choice.bind matchQuery
                         |> Choice.map callResponse
                         |> function
                            | Choice1Of2 response -> response
@@ -131,7 +154,8 @@ module Implementation =
              StatusCode=HttpStatusCode.OK
              Response=None
              Body=None
-             Headers= Map[]
+             Headers=None
+             Query= None
         }
 
     let stubRequest (uri:string) (rt: RequestType) (path:string) = 
@@ -153,17 +177,24 @@ module Implementation =
 
     let withBody body = updateRequest (fun r -> {r with Body=Some body})
 
+    let withParameter name value =
+        updateRequest (fun r -> 
+            {r with Query=r.Query 
+                          |> Option.getOrElse (Map[]) 
+                          |> Map.remove name 
+                          |> Map.add name value 
+                          |> Some}
+        )
+
     let withHeader header (value:obj) =
         updateRequest (fun r -> 
-            let values = 
-                match r.Headers |> Map.tryFind header with
-                | Some values -> values
-                | None        -> Seq.empty
-                |> Seq.append [value.ToString()] 
+            let headers = r.Headers |> Option.getOrElse (Map[])
+            let values = headers 
+                         |> Map.tryFind header
+                         |> Option.getOrElse Seq.empty
+                         |> Seq.append [value.ToString()] 
         
-            let rest = r.Headers |> Map.remove header
-        
-            {r with Headers=rest |> Map.add header values}
+            {r with Headers=headers |> Map.remove header |> Map.add header values |> Some}
         )
 
     type Host = | SchmancyHost of NancyHost
