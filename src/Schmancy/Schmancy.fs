@@ -8,7 +8,7 @@ open Nancy.Bootstrapper
 open Nancy.Extensions
 open Nancy.Responses
 open FSharpx
-open FSharpx.Validation
+open FSharpx.Choice
 
 [<AutoOpen>]
 module Implementation =
@@ -63,27 +63,26 @@ module Implementation =
 
             let matchRuleFor (fn:'T->'U->bool) (optional:'T option) (actual:'U) =
                 match optional with
-                | Some expected -> if (actual |> fn expected) then ok else notFound
+                | Some expected -> 
+                    printf "**** Actual   = %O *******\n" actual
+                    printf "**** Expected = %O *******\n" expected
+                    if (actual |> fn expected) then ok else notFound
                 | None -> ok
 
             let sameAs = matchRuleFor (=)
 
-            let containsAll = 
-                let contains (aMap:Map<_,_>) (bMap:Map<_, _>) =
-                    let sameKeyAndValue k v = bMap |> Map.tryFind k |> Option.forall ((=) v)
-                    aMap |> Map.forall sameKeyAndValue
-                matchRuleFor contains
-
+            let contains (aMap:Map<_,_>) (bMap:Map<_, _>) =
+                let sameKeyAndValue k v = bMap |> Map.containsKey k && bMap.[k] |> (=) aMap.[k]
+                aMap |> Map.forall sameKeyAndValue
+            
             let addRequest request =            
                 let matchBody () = x.Request.Body.AsString() |> sameAs request.Body
             
-                let matchHeaders _ = x.Request.Headers |> Map.ofHeaders |> containsAll request.Headers
+                let matchHeaders _ = 
+                    printf "***** Matching headers *******\n"
+                    x.Request.Headers |> Map.ofHeaders |> matchRuleFor contains request.Headers
             
-                let matchQuery _ = 
-                    let fn a b = true
-                    x.Request.Query 
-                    |> Map.ofQuery 
-                    |> matchRuleFor fn (request.Query)
+                let matchQuery _ = x.Request.Query |> Map.ofQuery |> matchRuleFor contains request.Query
 
                 let callResponse code = 
                     let response = new Response(StatusCode=request.StatusCode)
@@ -102,16 +101,16 @@ module Implementation =
                     response
 
                 let response = new Func<obj, obj>(fun _ ->
-                        () 
-                        |> matchBody
-//                        |> Choice.bind matchHeaders
-//                        |> Choice.bind matchQuery
-                        |> Choice.map callResponse
-                        |> function
-                           | Choice1Of2 response -> response
-                           | Choice2Of2 code -> new Response(StatusCode=code)
-                        |> box
-                    )
+                    () 
+                    |> matchBody
+                    >>= matchHeaders
+                    >>= matchQuery
+                    |> Choice.map callResponse
+                    |> function
+                        | Choice1Of2 response -> response
+                        | Choice2Of2 code -> new Response(StatusCode=code)
+                    |> box
+                )
                 
                 match request.Type with
                 | Any    -> 
@@ -212,7 +211,9 @@ module Implementation =
         SchmancyHost host
 
     let stop = function
-    | SchmancyHost nh -> nh.Stop()
+    | SchmancyHost nh -> 
+        nh.Stop()
+        nh.Dispose()
 
     let hostAndCall fn site = 
         
