@@ -16,11 +16,11 @@ module ``Stubbing with body and headers`` =
 
         stubRequest url RequestType.Post "/"
         |> withBody "\"abc\""
-        |> withHeader "Content-Length" 3
+        |> withHeader "Content-Length" 5
         |> hostAndCall (fun _ -> 
             request
                 .AddBody("abc")
-                .AddHeader("Content-Length", "3")
+                .AddHeader("Content-Length", "5")
                 |> ignore
 
             client.Execute(request).StatusCode

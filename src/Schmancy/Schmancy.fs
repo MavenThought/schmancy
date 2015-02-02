@@ -63,26 +63,23 @@ module Implementation =
 
             let matchRuleFor (fn:'T->'U->bool) (optional:'T option) (actual:'U) =
                 match optional with
-                | Some expected -> 
-                    printf "**** Actual   = %O *******\n" actual
-                    printf "**** Expected = %O *******\n" expected
-                    if (actual |> fn expected) then ok else notFound
+                | Some expected -> if (actual |> fn expected) then ok else notFound
                 | None -> ok
 
-            let sameAs = matchRuleFor (=)
-
-            let contains (aMap:Map<_,_>) (bMap:Map<_, _>) =
-                let sameKeyAndValue k v = bMap |> Map.containsKey k && bMap.[k] |> (=) aMap.[k]
+            let contains fn (aMap:Map<_,_>) (bMap:Map<_, _>) =
+                let sameKeyAndValue k v = bMap |> Map.containsKey k && bMap.[k] |> fn aMap.[k]
                 aMap |> Map.forall sameKeyAndValue
             
             let addRequest request =            
-                let matchBody () = x.Request.Body.AsString() |> sameAs request.Body
+                let matchBody () = x.Request.Body.AsString() |> matchRuleFor (=) request.Body
             
                 let matchHeaders _ = 
-                    printf "***** Matching headers *******\n"
-                    x.Request.Headers |> Map.ofHeaders |> matchRuleFor contains request.Headers
+                    let headerEq aSeq bSeq =
+                        aSeq |> Array.ofSeq = (bSeq |> Array.ofSeq)
+
+                    x.Request.Headers |> Map.ofHeaders |> matchRuleFor (contains headerEq) request.Headers
             
-                let matchQuery _ = x.Request.Query |> Map.ofQuery |> matchRuleFor contains request.Query
+                let matchQuery _ = x.Request.Query |> Map.ofQuery |> matchRuleFor (contains (=)) request.Query
 
                 let callResponse code = 
                     let response = new Response(StatusCode=request.StatusCode)
