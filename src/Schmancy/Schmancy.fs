@@ -23,6 +23,7 @@ module Implementation =
 
     type ResponseType =
     | JsonResponse of string
+    | TextResponse of string
     | CustomResponse of ResponseFn
 
     type RequestMatcher = {
@@ -84,14 +85,19 @@ module Implementation =
                 let callResponse code = 
                     let response = new Response(StatusCode=request.StatusCode)
 
-                    match request.Response with
-                    | Some (JsonResponse s)  -> 
-                        response.ContentType <- "json"
-                        response.Contents <- (fun stream -> 
+                    let streamString (str:string) = new System.Action<IO.Stream>(fun (stream:IO.Stream) -> 
                             let writer = new System.IO.StreamWriter(stream)
-                            writer.Write s
+                            writer.Write str
                             writer.Flush()
-                        )
+                    )
+
+                    match request.Response with
+                    | Some (JsonResponse json)  -> 
+                        response.WithContentType("json") |> ignore
+                        response.Contents <- streamString json
+                    | Some (TextResponse text) -> 
+                        response.WithContentType("text/html") |> ignore
+                        response.Contents <- streamString text
                     | Some (CustomResponse fn) -> fn x.Request response
                     | None -> ()
 
@@ -167,7 +173,9 @@ module Implementation =
         let request = {defaultRequest with Type=rt;Path=path}
         {site with Requests = request::site.Requests}
 
-    let withJsonResponse response = updateRequest (fun r -> {r with Response=Some (JsonResponse response)})
+    let withJsonResponse json = updateRequest (fun r -> {r with Response=Some (JsonResponse json)})
+
+    let withTextResponse text = updateRequest (fun r -> {r with Response=Some (TextResponse text)})
 
     let withStatus status = updateRequest (fun r -> {r with StatusCode=status})
 
