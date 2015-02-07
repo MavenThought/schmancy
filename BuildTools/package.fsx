@@ -13,7 +13,11 @@ module Package =
 
     let packagingDir = "packaging"
 
-    Target "Package" (fun _ ->
+    let noPublish = None
+
+    let publishTo str = Some str
+
+    let private package publishUrl =
         // Copy all the package files into a package folder
         let prjFolder = srcDir @@ prjName
         let prj = prjFolder @@ (prjName + ".fsproj")
@@ -37,8 +41,8 @@ module Package =
                 Summary = "Schmancy provides an easy way to specify HTTP URIs with expected parameters and responses to test APIs or any other software that uses HTTP calls"
                 WorkingDir = packagingDir
                 Version = Version.Current
-                Publish = true
-                PublishUrl = @"c:\packages"
+                Publish = publishUrl |> Option.isSome
+                PublishUrl = if publishUrl |> Option.isSome then publishUrl |> Option.get else ""
                 Dependencies = [
                                 dependency "Nancy"
                                 dependency "Nancy.Hosting.Self"
@@ -47,4 +51,9 @@ module Package =
 
             }) 
             "template.nuspec"
-    )
+
+    Target "Package" (fun _ -> package noPublish)
+
+    Target "Package:Local" (fun _ -> publishTo @"c:\packages" |> package)
+
+    Target "Package:Nuget" (fun _ -> publishTo @"http://nuget.org" |> package)
