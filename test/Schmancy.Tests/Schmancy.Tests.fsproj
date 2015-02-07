@@ -65,6 +65,7 @@
     <Compile Include="QueryParameters.fs" />
     <Compile Include="ReturningJSON.fs" />
     <Compile Include="BodyAndHeaders.fs" />
+    <Compile Include="StartingAndStopping.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FsUnit.NUnit">
