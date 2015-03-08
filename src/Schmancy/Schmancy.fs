@@ -246,4 +246,14 @@ type SchmancyBuilder (baseUri) =
 
     member this.HostWith (fn:System.Func<'T>) = target |> hostAndCall (fun () -> fn.Invoke())
 
+    member this.Start () = target |> start
+
+    member this.Stop host = host |> stop
+
+    member this.WithParameter key value = target <- target |> withParameter key value; this
+
     member this.RespondWithJson json = target <- target |> withJsonResponse json; this
+
+    member this.RespondWith text = target <- target |> withTextResponse text; this
+
+    member this.WithBody body = target <- target |> withBody body; this

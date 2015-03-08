@@ -50,8 +50,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseSchmancyTest.cs" />
     <Compile Include="When_calling_with_get.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="When_passing_parameters.cs" />
+    <Compile Include="When_returning_json.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Schmancy\Schmancy.fsproj">
