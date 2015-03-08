@@ -10,21 +10,22 @@ open Nancy.Responses
 open FSharpx
 open FSharpx.Choice
 
+type RequestType =
+    | Any
+    | Get
+    | Post
+    | Put
+    | Delete
+
 [<AutoOpen>]
 module Implementation =
-    type RequestType =
-        | Any
-        | Get
-        | Post
-        | Put
-        | Delete
-
     type ResponseFn = (Request -> Response -> unit)
 
     type ResponseType =
     | JsonResponse of string
     | TextResponse of string
     | CustomResponse of ResponseFn
+
 
     type RequestMatcher = {
         Type:RequestType
@@ -40,6 +41,7 @@ module Implementation =
         BaseUri:string
         Requests: RequestMatcher list
     }
+
 
     module Map =
         let ofHeaders dictionary = 
@@ -230,3 +232,18 @@ module Implementation =
 
         result
 
+
+
+type SchmancyBuilder (baseUri) =
+
+    let mutable target:SiteMatcher = {BaseUri=baseUri;Requests=[]}
+
+    member this.WhenRequesting path reqType = target <- target |> andStub reqType path; this
+
+    member this.Return (code:System.Net.HttpStatusCode) = 
+        let theCode = Enum.ToObject(typeof<Nancy.HttpStatusCode>, code) :?> Nancy.HttpStatusCode;
+        target <- target |> withStatus theCode; this
+
+    member this.HostWith (fn:System.Func<'T>) = target |> hostAndCall (fun () -> fn.Invoke())
+
+    member this.RespondWithJson json = target <- target |> withJsonResponse json; this

@@ -15,7 +15,6 @@ let runTests files =
       |> NUnit (fun p ->
           {p with
              DisableShadowCopy = true
-             ExcludeCategory = "DatabaseDependent"
              OutputFile = "./TestResults.xml" })
 
 let addTestTarget targetName testPrj =
