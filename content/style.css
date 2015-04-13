@@ -1,0 +1,81 @@
+﻿.masthead .navbar-default {
+  background-color: #f15a29;
+  border-color: #c0392b;
+}
+.masthead .navbar-default .navbar-brand {
+  color: #ffffff;
+}
+.masthead .navbar-default .navbar-brand:hover,
+.masthead .navbar-default .navbar-brand:focus {
+  color: #ffbbbc;
+}
+.masthead .navbar-default .navbar-text {
+  color: #ffffff;
+}
+.masthead .navbar-default .navbar-nav > li > a {
+  color: #ffffff;
+}
+.masthead .navbar-default .navbar-nav > li > a:hover,
+.masthead .navbar-default .navbar-nav > li > a:focus {
+  color: #ffbbbc;
+}
+.masthead .navbar-default .navbar-nav > .active > a,
+.masthead .navbar-default .navbar-nav > .active > a:hover,
+.masthead .navbar-default .navbar-nav > .active > a:focus {
+  color: #ffbbbc;
+  background-color: #c0392b;
+}
+.masthead .navbar-default .navbar-nav > .open > a,
+.masthead .navbar-default .navbar-nav > .open > a:hover,
+.masthead .navbar-default .navbar-nav > .open > a:focus {
+  color: #ffbbbc;
+  background-color: #c0392b;
+}
+.masthead .navbar-default .navbar-toggle {
+  border-color: #c0392b;
+}
+.masthead .navbar-default .navbar-toggle:hover,
+.masthead .navbar-default .navbar-toggle:focus {
+  background-color: #c0392b;
+}
+.masthead .navbar-default .navbar-toggle .icon-bar {
+  background-color: #ffffff;
+}
+.masthead .navbar-default .navbar-collapse,
+.masthead .navbar-default .navbar-form {
+  border-color: #ffffff;
+}
+.masthead .navbar-default .navbar-link {
+  color: #ffffff;
+}
+.masthead .navbar-default .navbar-link:hover {
+  color: #ffbbbc;
+}
+@media (max-width: 767px) {
+  .masthead .navbar-default .navbar-nav .open .dropdown-menu > li > a {
+    color: #ffffff;
+  }
+  .masthead .navbar-default .navbar-nav .open .dropdown-menu > li > a:hover,
+  .masthead .navbar-default .navbar-nav .open .dropdown-menu > li > a:focus {
+    color: #ffbbbc;
+  }
+  .masthead .navbar-default .navbar-nav .open .dropdown-menu > .active > a,
+  .masthead .navbar-default .navbar-nav .open .dropdown-menu > .active > a:hover,
+  .masthead .navbar-default .navbar-nav .open .dropdown-menu > .active > a:focus {
+    color: #ffbbbc;
+    background-color: #c0392b;
+  }
+}
+.header {
+  margin-bottom: 20px;
+}
+.header h1 {
+  font-size: 60px;
+}
+.header h1 small {
+  color: #f15a29;
+}
+#main > h1 {
+  margin-top: 0;
+}
+/*# sourceMappingURL=style.css.map */
